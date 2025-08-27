@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>CAB432 A1 Video App</title></head>
+<body>
+  <h1>Video App</h1>
+  <section>
+    <h3>Login</h3>
+    <input id="u" placeholder="username" value="alice">
+    <input id="p" placeholder="password" value="password123" type="password">
+    <button onclick="login()">Login</button>
+    <pre id="out"></pre>
+  </section>
+  <section>
+    <h3>Upload</h3>
+    <input type="file" id="f">
+    <button onclick="upload()">Upload</button>
+  </section>
+  <section>
+    <h3>Transcode</h3>
+    <input id="fileId" placeholder="fileId">
+    <select id="preset"><option>720p</option><option>480p</option></select>
+    <button onclick="transcode()">Start</button>
+  </section>
+  <script>
+    let tok = ""; const base = "";
+    const out = (m)=>document.getElementById('out').textContent = JSON.stringify(m,null,2);
+    async function login(){
+      const r = await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('u').value,password:document.getElementById('p').value})});
+      const j = await r.json(); tok=j.token; out(j);
+    }
+    async function upload(){
+      const fd = new FormData(); fd.append('file', document.getElementById('f').files[0]);
+      const r = await fetch(base+'/api/files/upload',{method:'POST',headers:{'Authorization':'Bearer '+tok},body:fd});
+      out(await r.json());
+    }
+    async function transcode(){
+      const r = await fetch(base+'/api/transcode',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({fileId:document.getElementById('fileId').value,preset:document.getElementById('preset').value})});
+      out(await r.json());
+    }
+  </script>
+</body>
+</html>

@@ -10,6 +10,7 @@ export type FileRec = { id: string; owner: string; originalName: string; storedP
 export type JobRec  = { id: string; owner: string; fileId: string; preset: string; status: string; startedAt?: number; finishedAt?: number; outputPath?: string; logs?: string; };
 
 function read(){ return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); }
+// following line is taken from ChatGPT or some part of it
 function write(d:any){ fs.writeFileSync(DB_PATH, JSON.stringify(d, null, 2)); }
 
 export const db = {

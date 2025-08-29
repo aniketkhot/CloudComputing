@@ -14,11 +14,15 @@ export function verifyToken(token: string): Claims {
 export function authMiddleware(req: any, res: any, next: any) {
   try {
     const h = req.headers.authorization || '';
+    // 
     const token = h.startsWith('Bearer ') ? h.slice(7) : '';
     req.user = verifyToken(token);
     next();
     //lost the token
+    
+
   } catch {
+    
     res.status(401).json({ error: 'Unauthorized' });
   }
 }

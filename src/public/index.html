@@ -25,6 +25,7 @@
     let tok = ""; const base = "";
     const out = (m)=>document.getElementById('out').textContent = JSON.stringify(m,null,2);
     async function login(){
+      // following line is taken from ChatGPT or some part of it
       const r = await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('u').value,password:document.getElementById('p').value})});
       const j = await r.json(); tok=j.token; out(j);
     }

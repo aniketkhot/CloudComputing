@@ -8,9 +8,11 @@ const USERS = [
 ];
 
 router.post('/login', (req, res) => {
+
   const { username, password } = req.body || {};
   const u = USERS.find(x => x.username === username && x.password === password);
   if (!u) return res.status(401).json({ error: 'Invalid credentials' });
+  
   const token = signToken(u.username, u.role);
   res.json({ token });
 });

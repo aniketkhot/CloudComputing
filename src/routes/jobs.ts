@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../services/jwt';
+import { requireAuth as authMiddleware } from '../services/jwt';
 import { db } from '../services/db';
 
 const router = Router();

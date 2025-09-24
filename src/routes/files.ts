@@ -2,7 +2,7 @@ import { Router } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { nanoid } from 'nanoid';
-import { authMiddleware } from '../services/jwt';
+import { requireAuth as authMiddleware  } from '../services/jwt';
 import { db, FileRec } from '../services/db';
 
 const router = Router();
@@ -25,9 +25,12 @@ router.post('/upload', authMiddleware, async (req: any, res) => {
 });
 
 router.get('/mine', authMiddleware, (req: any, res) => {
-  const rows = db.listFilesByOwner(req.user.sub).sort((a,b)=>b.createdAt-a.createdAt);
-  res.json(rows);
+  const files = db.listFilesByOwner(req.user.sub).sort((a,b)=>b.createdAt - a.createdAt);
+  if (!files?.length || files.length == 0) return res.json({ success: true, message: "You don’t have any files yet." });
+  res.json({ success: true, files });
 });
+
+
 
 router.get('/:fileId/download', authMiddleware, (req: any, res) => {
   const f = db.getFile(req.params.fileId);

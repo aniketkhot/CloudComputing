@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { nanoid } from 'nanoid';
-import { authMiddleware } from '../services/jwt';
+import { requireAuth as authMiddleware } from '../services/jwt';
 import { db } from '../services/db';
 import { transcode } from '../services/ffmpeg';
 

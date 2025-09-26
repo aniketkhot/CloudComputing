@@ -1,26 +1,45 @@
-import express from 'express';
-import fileUpload from 'express-fileupload';
-import path from 'path';
-import authRoutes from './routes/auth';
-import filesRoutes from './routes/files';
-import jobsRoutes from './routes/jobs';
-import transcodeRoutes from './routes/transcode';
+import express from "express";
+import fileUpload from "express-fileupload";
+import path from "path";
+import { initConfig } from "./config";   // <-- your config.ts
+import { requireAuth } from "./services/jwt";
 
-const app = express();
-app.use(express.json({ limit: '10mb' }));
-app.use(fileUpload({ createParentPath: true })); 
-// app.use('/public', express.static(path.join(__dirname, 'public')));// for windows
-app.use('/public', express.static(path.join(process.cwd(), 'src', 'public')));// ubuntu
+async function main() {
+  
+  await initConfig();
 
-app.use('/api/auth', authRoutes);
-app.use('/api/files', filesRoutes);
-app.use('/api/jobs', jobsRoutes);
-app.use('/api/transcode', transcodeRoutes);
+  
+  const { default: authRoutes }       = await import("./routes/auth");
+  const { default: filesRoutes }      = await import("./routes/files");
+  const { default: transcodeRoutes }  = await import("./routes/transcode");
+  
 
-app.get('/health', (_, res) => res.json({ ok: true }));
+  
+  const app = express();
+  app.use(fileUpload({ useTempFiles: true, tempFileDir: "/tmp" }));
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+  
+  const { uploadToAWS } = await import("./routes/files");
+  app.post("/upload", requireAuth, async (req: any, res) => {
+    try {
+      const f0 = req.files?.file; const f = Array.isArray(f0) ? f0[0] : f0;
+      if (!f) return res.status(400).json({ error: "file required (multipart 'file')" });
+      const { videoId, key } = await uploadToAWS(req, f);
+      res.json({ success: true, saved: videoId, key });
+    } catch (e: any) { console.error("Upload error", e); res.status(500).json({ error: e.message }); }
+  });
 
+  app.use("/public", express.static(path.join(process.cwd(), "src", "public")));
+  app.use("/api/auth", authRoutes);
+  app.use("/api/files", filesRoutes);
+  // app.use("/api/jobs", jobsRoutes);
+  app.use("/api/transcode", transcodeRoutes);
 
-//aws ec2 run-instances --image-id "ami-0279a86684f669718" --instance-type "t3.small" --instance-initiated-shutdown-behavior "terminate" --key-name "Aniket" --block-device-mappings '{"DeviceName":"/dev/sda1","Ebs":{"Encrypted":true,"DeleteOnTermination":true,"Iops":3000,"KmsKeyId":"arn:aws:kms:ap-southeast-2:901444280953:key/b0101809-9917-4e03-be5e-a357200ae578","SnapshotId":"snap-0341c3eaf0b93a377","VolumeSize":8,"VolumeType":"gp3","Throughput":125}}' --network-interfaces '{"SubnetId":"subnet-05a3b8177138c8b14","AssociatePublicIpAddress":true,"DeviceIndex":0,"Groups":["sg-032bd1ff8cf77dbb9"]}' --credit-specification '{"CpuCredits":"unlimited"}' --tag-specifications '{"ResourceType":"instance","Tags":[{"Key":"Name","Value":"n11672153_t3small"},{"Key":"qut-username","Value":"n11672153@qut.edu.au"},{"Key":"purpose","Value":"assignment-1"}]}' --iam-instance-profile '{"Arn":"arn:aws:iam::901444280953:instance-profile/CAB432-Instance-Role"}' --metadata-options '{"HttpEndpoint":"enabled","HttpPutResponseHopLimit":2,"HttpTokens":"required"}' --private-dns-name-options '{"HostnameType":"ip-name","EnableResourceNameDnsARecord":false,"EnableResourceNameDnsAAAARecord":false}' --count "1" 
+  app.get("/health", (_req, res) => res.json({ ok: true }));
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+}
+
+main().catch(err => { console.error("Fatal startup error:", err); process.exit(1); });

@@ -7,10 +7,11 @@ import {
   AuthFlowType,
 } from "@aws-sdk/client-cognito-identity-provider";
 import crypto from "crypto";
+import { getConfig } from "../config";
 
 const router = Router();
 
-const region = process.env.AWS_REGION || "ap-southeast-2";
+const {region} = getConfig(); // process.env.AWS_REGION || "ap-southeast-2";
 const userPoolId = process.env.COGNITO_USER_POOL_ID || "ap-southeast-2_VBlfPVnT5";
 const clientId   = process.env.COGNITO_CLIENT_ID || "29h0gdv9mua4nin2j8nrna4356";
 const clientSecret = process.env.COGNITO_CLIENT_SECRET|| "66532r97ecgorsmjse3paikqi7r7i0jmf18kmfr4rs9p0727o3c";

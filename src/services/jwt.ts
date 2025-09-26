@@ -10,7 +10,7 @@ const clientSecret = process.env.COGNITO_CLIENT_SECRET|| "66532r97ecgorsmjse3pai
 const verifier = CognitoJwtVerifier.create({
   userPoolId: process.env.COGNITO_USER_POOL_ID || userPoolId,
   clientId: process.env.COGNITO_CLIENT_ID || clientId,
-  tokenUse: "id", // we return the ID token as `token`
+  tokenUse: "id", // we return the ID token as token
 });
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -18,8 +18,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     const raw = req.headers.authorization || "";
     const token = raw.startsWith("Bearer ") ? raw.slice(7) : "";
     if (!token) return res.status(401).json({ error: "Missing token" });
-    const payload = await verifier.verify(token);   // mirrors your demo verification step :contentReference[oaicite:3]{index=3}
-    (req as any).user = payload; // contains sub, email, cognito:groups, etc.
+    const payload = await verifier.verify(token);   
+    (req as any).user = payload; 
     next();
   } catch (e: any) {
     res.status(401).json({ error: "Invalid token" });

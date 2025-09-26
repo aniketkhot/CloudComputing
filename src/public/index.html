@@ -1,43 +1,173 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>CAB432 A1 Video App</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CAB432 Video App Tester</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    section { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; border-radius: 6px; }
+    h2 { margin-top: 0; font-size: 1.2rem; }
+    input, select, button { margin: 0.25rem 0; padding: 0.4rem; }
+    pre { background: #f7f7f7; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; }
+  </style>
+</head>
 <body>
-  <h1>Video App</h1>
+  <h1>CAB432 Video App Tester</h1>
+
   <section>
-    <h3>Login</h3>
-    <input id="u" placeholder="username" value="alice">
-    <input id="p" placeholder="password" value="password123" type="password">
+    <h2>Register</h2>
+    <input id="regUser" placeholder="username">
+    <input id="regEmail" placeholder="email">
+    <input id="regPass" type="password" placeholder="password">
+    <button onclick="register()">Register</button>
+  </section>
+
+  <section>
+    <h2>Confirm</h2>
+    <input id="confUser" placeholder="username">
+    <input id="confCode" placeholder="code from email">
+    <button onclick="confirmUser()">Confirm</button>
+  </section>
+
+  <section>
+    <h2>Login</h2>
+    <input id="loginUser" placeholder="username">
+    <input id="loginPass" type="password" placeholder="password">
     <button onclick="login()">Login</button>
-    <pre id="out"></pre>
   </section>
+
   <section>
-    <h3>Upload</h3>
-    <input type="file" id="f">
-    <button onclick="upload()">Upload</button>
+    <h2>Upload File</h2>
+    <input type="file" id="uploadFile">
+    
+    <button onclick="upload()">Upload (server-side)</button>
+    <button onclick="presignUpload()">Upload (pre-signed)</button>
   </section>
+
   <section>
-    <h3>Transcode</h3>
+    <h2>Transcode</h2>
     <input id="fileId" placeholder="fileId">
-    <select id="preset"><option>720p</option><option>480p</option></select>
-    <button onclick="transcode()">Start</button>
+    <select id="preset">
+      <option value="720p">720p</option>
+      <option value="480p">480p</option>
+    </select>
+    <button onclick="transcode()">Start Transcode</button>
   </section>
-  <script>
-    let tok = ""; const base = "";
-    const out = (m)=>document.getElementById('out').textContent = JSON.stringify(m,null,2);
-    async function login(){
-      // following line is taken from ChatGPT or some part of it
-      const r = await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('u').value,password:document.getElementById('p').value})});
-      const j = await r.json(); tok=j.token; out(j);
-    }
-    async function upload(){
-      const fd = new FormData(); fd.append('file', document.getElementById('f').files[0]);
-      const r = await fetch(base+'/api/files/upload',{method:'POST',headers:{'Authorization':'Bearer '+tok},body:fd});
-      out(await r.json());
-    }
-    async function transcode(){
-      const r = await fetch(base+'/api/transcode',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({fileId:document.getElementById('fileId').value,preset:document.getElementById('preset').value})});
-      out(await r.json());
-    }
-  </script>
+
+  <section>
+    <h2>My Files</h2>
+    <button onclick="listMine()">List My Files</button>
+  </section>
+
+  <section>
+    <h2>Download</h2>
+    <input id="dlKey" placeholder="S3 key">
+    <button onclick="presignDownload()">Get Pre-signed Download URL</button>
+  </section>
+
+  <h2>Output</h2>
+  <pre id="out"></pre>
+
+<script>
+const base = ""; // leave empty if served from same host/port
+let token = "";
+
+function show(obj) {
+  document.getElementById("out").textContent = JSON.stringify(obj, null, 2);
+}
+
+// Auth
+async function register() {
+  const r = await fetch(base+"/api/auth/register", {
+    method:"POST", headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      username: document.getElementById("regUser").value,
+      email: document.getElementById("regEmail").value,
+      password: document.getElementById("regPass").value
+    })
+  });
+  show(await r.json());
+}
+async function confirmUser() {
+  const r = await fetch(base+"/api/auth/confirm", {
+    method:"POST", headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      username: document.getElementById("confUser").value,
+      code: document.getElementById("confCode").value
+    })
+  });
+  show(await r.json());
+}
+async function login() {
+  const r = await fetch(base+"/api/auth/login", {
+    method:"POST", headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      username: document.getElementById("loginUser").value,
+      password: document.getElementById("loginPass").value
+    })
+  });
+  const j = await r.json();
+  token = j.token;
+  show(j);
+}
+
+// Files
+async function upload() {
+  
+  const f = document.getElementById("uploadFile").files[0];
+  const fd = new FormData();
+  console.log(-1)
+  fd.append("file", f);
+  console.log(-1)
+  const r = await fetch(base+"/upload", {
+    method:"POST", headers:{'Authorization':'Bearer '+token}, body: fd
+  });
+  console.log(-1)
+  show(await r.json());
+}
+async function presignUpload() {
+  const f = document.getElementById("uploadFile").files[0];
+  const r1 = await fetch(base+"/api/files/presign-upload", {
+    method:"POST",
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({ filename: f.name, contentType: f.type })
+  });
+  const j1 = await r1.json();
+  const put = await fetch(j1.url, { method:"PUT", body:f });
+  show({ presignResp: j1, putStatus: put.status });
+}
+
+// Transcode
+async function transcode() {
+  const r = await fetch(base+"/api/transcode", {
+    method:"POST",
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({
+      fileId: document.getElementById("fileId").value,
+      preset: document.getElementById("preset").value
+    })
+  });
+  show(await r.json());
+}
+
+// List
+async function listMine() {
+  const r = await fetch(base+"/api/files/mine", { headers:{'Authorization':'Bearer '+token} });
+  show(await r.json());
+}
+
+// Download
+async function presignDownload() {
+  const key = document.getElementById("dlKey").value;
+  const r = await fetch(base+"/api/files/presign-download", {
+    method:"POST",
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({ key })
+  });
+  const j = await r.json();
+  show(j);
+  if (j.url) window.open(j.url, "_blank");
+}
+</script>
 </body>
 </html>

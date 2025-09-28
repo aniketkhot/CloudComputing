@@ -1,7 +1,7 @@
 import ffmpeg, { FfmpegCommand } from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 
-// point fluent-ffmpeg at the bundled binary (works on EC2 too)
+
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 export function transcode(

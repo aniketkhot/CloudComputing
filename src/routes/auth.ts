@@ -18,7 +18,7 @@ const region = cfgRegion || process.env.AWS_REGION || "ap-southeast-2";
 
 const cognito = new CognitoIdentityProviderClient({ region });
 
-// Load once.... underlying helper should cache
+
 const secretPromise: Promise<CognitoSecret> = getCognitoSecret();
 
 async function secretHash(username: string): Promise<string> {

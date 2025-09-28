@@ -4,7 +4,7 @@ export type AppConfig = {
   region: string;
   bucket: string;
   ddbTable: string;
-  qutUsername?: string; // for tagging
+  qutUsername?: string; 
 };
 
 let _config: AppConfig | null = null;
@@ -22,7 +22,7 @@ export async function initConfig(): Promise<AppConfig> {
 
   
   const bucket   =  map["/n11672153/bucket-name"];
-  const ddbTable =  map["/n11672153/bucket-name"];
+  const ddbTable =  map["/n11672153/ddm_table"];
 
   if (!bucket || !ddbTable) {
     throw new Error("Missing S3 bucket or DynamoDB table name (Parameter Store or env).");

@@ -54,10 +54,12 @@
     <button onclick="transcode()">Start Transcode</button>
   </section>
 
-  <section>
-    <h2>My Files</h2>
-    <button onclick="listMine()">List My Files</button>
-  </section>
+<section>
+  <h2>My Files</h2>
+  <button onclick="listMine()">List My Files</button>
+  <div id="filesView" style="margin-top:0.75rem"></div>
+</section>
+
 
   <section>
     <h2>Download</h2>
@@ -69,7 +71,7 @@
   <pre id="out"></pre>
 
 <script>
-const base = ""; // leave empty if served from same host/port
+const base = ""; 
 let token = "";
 
 function show(obj) {
@@ -150,11 +152,78 @@ async function transcode() {
   show(await r.json());
 }
 
-// List
 async function listMine() {
-  const r = await fetch(base+"/api/files/mine", { headers:{'Authorization':'Bearer '+token} });
-  show(await r.json());
+  const r = await fetch(base + "/api/files/mine", {
+    headers: { Authorization: "Bearer " + token }
+  });
+  const j = await r.json();
+  show(j); 
+
+  const mount = document.getElementById("filesView");
+
+  if (!j.files || j.files.length === 0) {
+    mount.innerHTML = `<em>No files yet for this user.</em>`;
+    return;
+  }
+
+  // Build table
+  const rows = j.files.map(f => {
+    const created = fmtTime(f.createdAt || "");
+    const updated = fmtTime(f.updatedAt || "");
+    const variantsCnt = Array.isArray(f.variants) ? f.variants.length : 0;
+
+    return `
+      <tr>
+        <td style="white-space:nowrap">${esc(f.videoId)}</td>
+        <td>${esc(f.status || "")}</td>
+        <td>${esc(f.bucket || "")}</td>
+        <td title="${esc(f.sourceKey)}" style="max-width:380px; overflow:hidden; text-overflow:ellipsis;">
+          ${esc(f.sourceKey)}
+        </td>
+        <td style="text-align:center">${variantsCnt}</td>
+        <td style="white-space:nowrap">${created}</td>
+        <td style="white-space:nowrap">${updated}</td>
+        <td style="white-space:nowrap">
+          <button onclick="presignDownload('${js(f.sourceKey)}')">Download</button>
+          <select id="preset-${js(f.videoId)}">
+            <option value="720p">720p</option>
+            <option value="480p">480p</option>
+          </select>
+          <button onclick="transcode('${js(f.videoId)}', document.getElementById('preset-${js(f.videoId)}').value)">
+            Transcode
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  mount.innerHTML = `
+    <div style="overflow:auto">
+      <table style="width:100%; border-collapse:collapse">
+        <thead>
+          <tr style="background:#eee">
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Video ID</th>
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Status</th>
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Bucket</th>
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Source Key</th>
+            <th style="text-align:center; padding:6px; border:1px solid #ddd">Variants</th>
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Created</th>
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Updated</th>
+            <th style="text-align:left; padding:6px; border:1px solid #ddd">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
+
+
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c])); }
+function js(s){ return String(s ?? "").replace(/['"\\]/g, m => ({ "'":"\\'", "\"":"\\\"", "\\":"\\\\" }[m])); }
+function fmtTime(s){ try{ return new Date(s).toLocaleString() }catch{ return "" } }
 
 // Download
 async function presignDownload() {

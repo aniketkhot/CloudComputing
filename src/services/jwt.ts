@@ -8,7 +8,7 @@ let verifierPromise = (async () => {
   return CognitoJwtVerifier.create({
     userPoolId: secret["pool-id"],
     clientId: secret["client-id"],
-    tokenUse: "id", // validate ID tokens
+    tokenUse: "id", 
   });
 })();
 

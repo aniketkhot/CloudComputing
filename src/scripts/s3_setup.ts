@@ -24,6 +24,6 @@ async function main() {
   console.log("Read:", await (get.Body as any).transformToString());
 
   const presigned = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: objectKey }), { expiresIn: 3600 });
-  console.log("Presigned GET:", presigned);
+  console.log("Presigned get:", presigned);
 }
 main().catch(console.error);

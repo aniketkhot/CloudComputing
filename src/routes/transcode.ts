@@ -62,11 +62,11 @@ router.post("/", requireAuth, async (req: any, res: Response) => {
   // Transcode
   await transcode(inPath, outPath, `${reso.w}x${reso.h}`);
   console.log("#######4")
-  // Upload variant
+  // S3
   const variantKey = `users/${sub}/${fileId}/variant/${reso.name}.mp4`;
   await s3.send(new PutObjectCommand({ Bucket: bucket, Key: variantKey, Body: createReadStream(outPath), ContentType: "video/mp4" }));
   console.log("#######5")
-  // Update metadata
+  // dynamo
   const stat = await fs.stat(outPath);
   await repo.addVariant(qutUsername, fileId, { key: variantKey, resolution: reso.name, size: stat.size });
   await repo.setStatus(qutUsername, fileId, "ready");

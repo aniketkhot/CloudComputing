@@ -23,7 +23,7 @@ export async function getCognitoSecret(): Promise<CognitoSecret> {
   );
 
   if (!response.SecretString) {
-    throw new Error("SecretString not found in response");
+    throw new Error("SecretString not found in res");
   }
   console.log()
   const parsed = JSON.parse(response.SecretString) as CognitoSecret;

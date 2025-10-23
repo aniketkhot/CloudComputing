@@ -21,7 +21,7 @@ async function main() {
     }));
     console.log("#######Table creating…");
   } catch (e) {
-    console.log("CreateTable skipped/failed:", (e as any)?.name);
+    console.log("CreateTable failed:", (e as any)?.name);
   }
 }
 main().catch(console.error);

@@ -83,7 +83,7 @@ export async function uploadToAWS(req: any, f: any) {
   const videoId = nanoid();
   const key = `users/${sub}/${videoId}/original/${f.name}`;
 
-  // sanity logs
+  
   console.log("uploadToAWS:", { name:f.name, size:f.size, tmp:f.tempFilePath, mime:f.mimetype });
 
   await s3.send(new PutObjectCommand({

@@ -25,7 +25,7 @@ export async function initConfig(): Promise<AppConfig> {
   const ddbTable =  map["/n11672153/ddm_table"];
 
   if (!bucket || !ddbTable) {
-    throw new Error("Missing S3 bucket or DynamoDB table name (Parameter Store or env).");
+    throw new Error("Missing S3 bucket or DynamoDB table.");
   }
 
   _config = { region, bucket, ddbTable };
@@ -33,6 +33,6 @@ export async function initConfig(): Promise<AppConfig> {
 }
 
 export function getConfig(): AppConfig {
-  if (!_config) throw new Error("Config not initialised. Call initConfig() first.");
+  if (!_config) throw new Error("config not initialised");
   return _config;
 }

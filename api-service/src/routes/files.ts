@@ -15,7 +15,7 @@ const parameter_name = "/n1234567/demo_parameter";
 
 const {bucket} =  getConfig() //process.env.S3_BUCKET || "cab432-n11672153-videos";               // e.g., cab432-n11672153-videos
 const {ddbTable}  = getConfig()//process.env.DDB_TABLE|| "cab432-n11672153-videos";               // e.g., cab432-n11672153-videos
-const repo   = videosRepo(ddb, ddbTable);
+const repo   = videosRepo(ddb(), ddbTable);
 
 // GET /api/files/mine
 router.get("/mine", requireAuth, async (req: any, res: Response) => {
@@ -86,7 +86,7 @@ export async function uploadToAWS(req: any, f: any) {
   
   console.log("uploadToAWS:", { name:f.name, size:f.size, tmp:f.tempFilePath, mime:f.mimetype });
 
-  await s3.send(new PutObjectCommand({
+  await s3().send(new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     Body: createReadStream(f.tempFilePath),  // read from temp file

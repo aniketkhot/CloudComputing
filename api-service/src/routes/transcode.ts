@@ -3,18 +3,17 @@ import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { aws } from "../services/aws";
 import { getConfig } from "../config";
 import { v4 as uuidv4 } from "uuid";
-
+import { videosRepo } from "../services/videosRepo";
+import { ddb, presignGet, presignPut, s3 } from "../services/aws";
+import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 // You can reuse your JWT middleware here if needed
 const router = Router();
 
-/**
- * POST /transcode/submit
- * Body: { key: string, outputPreset?: string }
- * Behavior: enqueues a transcode job to SQS. Worker will process.
- */
-router.post("/submit", async (req: Request, res: Response) => {
+
+router.post("/", async (req: Request, res: Response) => {
   try {
-    const { key, outputPreset = "mp4-720p" } = req.body || {};
+    console.log(req)
+    const {qutUsername, key, outputPreset = "mp4-720p" } = req.body || {};
     if (!key) return res.status(400).json({ error: "Missing 'key' (S3 object key)" });
 
     const { jobsQueueUrl, bucket } = getConfig();
@@ -26,9 +25,23 @@ router.post("/submit", async (req: Request, res: Response) => {
       correlationId,
       bucket,
       key,
+      qutUsername,
       outputPreset,
       requestedAt: new Date().toISOString()
     };
+    console.log(message)
+        async function diag() {
+      
+      const sts = new STSClient("ap-southeast-2");
+      const ident = await sts.send(new GetCallerIdentityCommand({}));
+      
+      
+      
+      console.log("[diag] bucket:", bucket);
+      console.log("[diag] caller:", ident?.Arn);
+    }
+    await diag()
+      
 
     await sqs.send(new SendMessageCommand({
       QueueUrl: jobsQueueUrl,

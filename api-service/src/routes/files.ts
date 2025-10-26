@@ -7,6 +7,7 @@ import { videosRepo } from "../services/videosRepo";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createReadStream, promises as fs } from "fs";
 import { getConfig } from "../config";
+import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 
 const router = Router();
 router.use(fileUpload());
@@ -83,6 +84,17 @@ export async function uploadToAWS(req: any, f: any) {
   const videoId = nanoid();
   const key = `users/${sub}/${videoId}/original/${f.name}`;
 
+    async function diag() {
+  
+  const sts = new STSClient("ap-southeast-2");
+  const ident = await sts.send(new GetCallerIdentityCommand({}));
+  
+  
+  
+  console.log("[diag] bucket:", bucket);
+  console.log("[diag] caller:", ident?.Arn);
+}
+await diag()
   
   console.log("uploadToAWS:", { name:f.name, size:f.size, tmp:f.tempFilePath, mime:f.mimetype });
 

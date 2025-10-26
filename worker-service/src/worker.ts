@@ -1,64 +1,101 @@
 import { ReceiveMessageCommand, DeleteMessageCommand } from "@aws-sdk/client-sqs";
-import { initConfig, getConfig } from "./config";
+import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import { aws } from "./services/aws";
-import { v4 as uuidv4 } from "uuid";
-import dotenv from "dotenv";
-dotenv.config();
-// If your ffmpeg helper exists at domain/ffmpeg.ts:
+import { randomUUID } from "crypto";
+import * as fs from "fs";
+import ffmpeg from "fluent-ffmpeg";
+import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 import * as path from "path";
 import { spawn } from "child_process";
-// Replace with your own abstraction if you already have one:
-async function runFfmpeg(inputPath: string, outputPath: string, preset: string): Promise<void> {
-  // Example: very simple mp4 transcode; adjust to your existing helper
-  return new Promise((resolve, reject) => {
-    const args = ["-y", "-i", inputPath, "-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac", outputPath];
-    const p = spawn("ffmpeg", args);
-    p.on("error", reject);
-    p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}`))));
+import { pipeline } from "stream/promises";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { addVariant, setStatus } from "./services/videoRepo";
+ffmpeg.setFfmpegPath(ffmpegPath);
+
+// async function runFfmpeg(inputPath: string, outputPath: string): Promise<void> {
+//   // Adjust filters/presets as needed
+//   const args = ["-y", "-i", inputPath, "-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac", outputPath];
+//   return new Promise((resolve, reject) => {
+//     const p = spawn("ffmpeg", args, { stdio: ["ignore", "inherit", "inherit"] });
+//     p.on("error", reject);
+//     p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}`))));
+//   });
+// }
+
+function transcode(src: string, dst: string, size: string) {
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg(src)
+      .videoCodec("libx264")
+      .size(size)
+      .outputOptions(["-preset veryfast", "-movflags +faststart"])
+      .on("end", (_stdout: string | null, _stderr: string | null) => resolve())
+      .on("error", (err: any) => reject(err))
+      .save(dst);
   });
 }
 
 async function processMessage(body: any) {
   const { s3 } = aws();
-  const { bucket } = getConfig();
+  const bucket = "cab432-n11672153-videos"
+  console.log(body)
+  const key = String(body.key);
+  const videoId = key.split('/')[2];
+  const qutUsername = String(body.qutUsername);
+  const preset = String(body.outputPreset ?? "mp4-720p");
+  const correlationId = body.correlationId || randomUUID();
 
-  const key = body.key as string;
-  const preset = (body.outputPreset as string) || "mp4-720p";
-  const correlationId = body.correlationId || uuidv4();
+  const workDir = "/tmp";
+  const inFile = path.join(workDir, `in-${correlationId}.mov`);
+  const outFile = path.join(workDir, `out-${correlationId}.mp4`);
 
-  // 1) Download from S3 (you can stream to a tmp file)
-  const inFile = `/tmp/in-${correlationId}`;
-  const outFile = `/tmp/out-${correlationId}.mp4`;
+  console.log(` Downloading: s3://${bucket}/${key}`);
 
-  // Minimal streaming download example
-  // For brevity: rely on aws s3 cp via child_process or implement GetObject stream:
-  const { spawn } = await import("child_process");
-  await new Promise<void>((resolve, reject) => {
-    const cp = spawn("aws", ["s3", "cp", `s3://${bucket}/${key}`, inFile]);
-    cp.on("error", reject);
-    cp.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`aws s3 cp in exit ${code}`))));
-  });
+  await setStatus("n11672153@qut.edu.au", videoId, "transcoding");
+  
+  const getResp = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  if (!getResp.Body) throw new Error("GetObject returned empty Body");
+  await pipeline(getResp.Body as NodeJS.ReadableStream, fs.createWriteStream(inFile));
 
-  // 2) Transcode
-  await runFfmpeg(inFile, outFile, preset);
+  // await setStatus(qutUsername, key, "transcoding");
 
-  // 3) Upload to S3 (output to a parallel folder, e.g., "outputs/")
-  const outputKey = key.replace(/^uploads\//, "outputs/").replace(/\.[^/.]+$/, ".mp4");
-  await new Promise<void>((resolve, reject) => {
-    const up = spawn("aws", ["s3", "cp", outFile, `s3://${bucket}/${outputKey}`]);
-    up.on("error", reject);
-    up.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`aws s3 cp out exit ${code}`))));
-  });
+  
+  
+  // 2) Transcode with ffmpeg
+  const reso = preset === "480p" ? { w: 854, h: 480, name: "480p" as const } : { w: 1280, h: 720, name: "720p" as const };
+  console.log(`Transcoding (${preset}) ...`);
+  await transcode(inFile, outFile, `${reso.w}x${reso.h}`);
 
-  // 4) (Optional) Update DynamoDB status via your videosRepo if you moved it here.
-  // TODO: call your videosRepo.updateStatus(correlationId, "COMPLETED", { outputKey });
+  
+  
+  
+  // 3) Upload to S3 
+  const outputKey = key
+    .replace(/^uploads\//, "outputs/")
+    .replace(/\/original\//, "/outputs/") // 
+    .replace(/\.[^/.]+$/, ".mp4");        // force .mp4
+  console.log(` Uploading: s3://${bucket}/${outputKey}`);
+
+  const bodyStream = fs.createReadStream(outFile);
+  await s3.send(new PutObjectCommand({ Bucket: bucket, Key: outputKey, Body: bodyStream, ContentType: "video/mp4" }));
+
+    await addVariant("n11672153@qut.edu.au", videoId, {
+  preset,
+  key: outputKey,
+  createdAt: new Date().toISOString(),
+});
+await setStatus("n11672153@qut.edu.au", videoId, "ready");
+
+  
+// 4) Cleanup tmp files (best-effort)
+  fs.rm(inFile, { force: true }, () => {});
+  fs.rm(outFile, { force: true }, () => {});
 
   console.log(`Processed ${key} -> ${outputKey}`);
 }
 
 async function main() {
-  await initConfig();
-  const { jobsQueueUrl } = getConfig();
+  
+  const jobsQueueUrl = "https://sqs.ap-southeast-2.amazonaws.com/901444280953/n11672153-transcoder-queue"
   const { sqs } = aws();
 
   console.log("Worker started. Polling:", jobsQueueUrl);
@@ -72,9 +109,7 @@ async function main() {
         VisibilityTimeout: 300
       }));
 
-      if (!resp.Messages || resp.Messages.length === 0) {
-        continue;
-      }
+      if (!resp.Messages || resp.Messages.length === 0) continue;
 
       for (const msg of resp.Messages) {
         try {
@@ -85,13 +120,14 @@ async function main() {
             QueueUrl: jobsQueueUrl,
             ReceiptHandle: msg.ReceiptHandle!
           }));
-        } catch (e) {
-          console.error("Process error (will be retried by SQS):", e);
-          // Do not delete message => SQS will retry; after maxReceive it goes to DLQ if configured
+        } catch (e: any) {
+          console.error("Process error (will be retried by SQS):", e?.message || e);
+          
         }
       }
     } catch (e) {
       console.error("Poll error:", e);
+      
       await new Promise((r) => setTimeout(r, 3000));
     }
   }
@@ -101,3 +137,4 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+

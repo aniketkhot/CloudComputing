@@ -46,7 +46,7 @@
 
   <section>
     <h2>Transcode</h2>
-    <input id="fileId" placeholder="fileId">
+    <input id="key" placeholder="key">
     <select id="preset">
       <option value="720p">720p</option>
       <option value="480p">480p</option>
@@ -80,7 +80,7 @@ function show(obj) {
 
 // Auth
 async function register() {
-  const r = await fetch(base+"/api/auth/register", {
+  const r = await fetch(base+"/auth/register", {
     method:"POST", headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       username: document.getElementById("regUser").value,
@@ -91,7 +91,7 @@ async function register() {
   show(await r.json());
 }
 async function confirmUser() {
-  const r = await fetch(base+"/api/auth/confirm", {
+  const r = await fetch(base+"/auth/confirm", {
     method:"POST", headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       username: document.getElementById("confUser").value,
@@ -101,7 +101,7 @@ async function confirmUser() {
   show(await r.json());
 }
 async function login() {
-  const r = await fetch(base+"/api/auth/login", {
+  const r = await fetch(base+"/auth/login", {
     method:"POST", headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       username: document.getElementById("loginUser").value,
@@ -129,7 +129,7 @@ async function upload() {
 }
 async function presignUpload() {
   const f = document.getElementById("uploadFile").files[0];
-  const r1 = await fetch(base+"/api/files/presign-upload", {
+  const r1 = await fetch(base+"/files/presign-upload", {
     method:"POST",
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body: JSON.stringify({ filename: f.name, contentType: f.type })
@@ -141,11 +141,11 @@ async function presignUpload() {
 
 // Transcode
 async function transcode() {
-  const r = await fetch(base+"/api/transcode", {
+  const r = await fetch(base+"/transcode", {
     method:"POST",
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body: JSON.stringify({
-      fileId: document.getElementById("fileId").value,
+      key: document.getElementById("key").value,
       preset: document.getElementById("preset").value
     })
   });
@@ -153,7 +153,7 @@ async function transcode() {
 }
 
 async function listMine() {
-  const r = await fetch(base + "/api/files/mine", {
+  const r = await fetch(base + "/files/mine", {
     headers: { Authorization: "Bearer " + token }
   });
   const j = await r.json();
@@ -228,7 +228,7 @@ function fmtTime(s){ try{ return new Date(s).toLocaleString() }catch{ return "" 
 // Download
 async function presignDownload() {
   const key = document.getElementById("dlKey").value;
-  const r = await fetch(base+"/api/files/presign-download", {
+  const r = await fetch(base+"/files/presign-download", {
     method:"POST",
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body: JSON.stringify({ key })

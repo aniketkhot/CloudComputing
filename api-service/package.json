@@ -15,6 +15,7 @@
     "@aws-sdk/client-secrets-manager": "^3.914.0",
     "@aws-sdk/client-sqs": "^3.637.0",
     "@aws-sdk/client-ssm": "^3.637.0",
+    "@aws-sdk/client-sts": "^3.917.0",
     "@aws-sdk/lib-dynamodb": "^3.914.0",
     "@aws-sdk/s3-request-presigner": "^3.914.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",

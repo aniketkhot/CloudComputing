@@ -24,7 +24,7 @@ export async function initConfig(): Promise<AppConfig> {
 
   const bucket = process.env.BUCKET || map["/n11672153/bucket-name"];
   const ddbTable = process.env.DDB_TABLE || map["/n11672153/ddm_table"];
-  const jobsQueueUrl = process.env.JOBS_QUEUE_URL || map["/n11672153/jobs_queue_url"];
+  const jobsQueueUrl = "https://sqs.ap-southeast-2.amazonaws.com/901444280953/n11672153-transcoder-queue" //||process.env.JOBS_QUEUE_URL || map["/n11672153/jobs_queue_url"];
 
   if (!bucket || !ddbTable) {
     throw new Error("Missing S3 bucket or DynamoDB table name (Parameter Store or env).");

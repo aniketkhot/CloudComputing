@@ -4,25 +4,31 @@ import {
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getConfig } from "../config";
 
 let _s3: S3Client;
 let _ddb: DynamoDBClient;
+let ddbDoc: DynamoDBDocumentClient;
 let _sqs: SQSClient;
 
 function ensure() {
   const { region } = getConfig();
   if (!_s3) _s3 = new S3Client({ region });
   if (!_ddb) _ddb = new DynamoDBClient({ region });
+    if (!ddbDoc) ddbDoc = DynamoDBDocumentClient.from(_ddb, {
+    marshallOptions: { removeUndefinedValues: true }
+  });
   if (!_sqs) _sqs = new SQSClient({ region });
+
 }
 
 /** Compatibility helper */
 export function aws() {
   ensure();
-  return { s3: _s3, ddb: _ddb, sqs: _sqs };
+  return { s3: _s3, ddb: ddbDoc, sqs: _sqs };
 }
 
 export function s3(): S3Client {

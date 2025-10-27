@@ -146,7 +146,7 @@ async function transcode() {
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
     body: JSON.stringify({
       key: document.getElementById("key").value,
-      preset: document.getElementById("preset").value
+      outputPreset: document.getElementById("preset").value
     })
   });
   show(await r.json());

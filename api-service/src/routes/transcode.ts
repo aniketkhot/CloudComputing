@@ -12,8 +12,8 @@ const router = Router();
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    console.log(req)
-    const {qutUsername, key, outputPreset = "mp4-720p" } = req.body || {};
+    console.log(req.body)
+    const {qutUsername, key, preset } = req.body || {};
     if (!key) return res.status(400).json({ error: "Missing 'key' (S3 object key)" });
 
     const { jobsQueueUrl, bucket } = getConfig();
@@ -26,7 +26,7 @@ router.post("/", async (req: Request, res: Response) => {
       bucket,
       key,
       qutUsername,
-      outputPreset,
+      outputPreset : preset,
       requestedAt: new Date().toISOString()
     };
     console.log(message)

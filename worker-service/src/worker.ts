@@ -41,7 +41,7 @@ async function processMessage(body: any) {
   const key = String(body.key);
   const videoId = key.split('/')[2];
   const qutUsername = String(body.qutUsername);
-  const preset = String(body.outputPreset ?? "mp4-720p");
+  const preset = String(body.outputPreset ?? "720p");
   const correlationId = body.correlationId || randomUUID();
 
   const workDir = "/tmp";
